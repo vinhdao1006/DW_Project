@@ -23,3 +23,7 @@ GET http://localhost:8000/chart/3?state=CA
 ###
 // @no-log
 GET http://localhost:8000/chart/5/?state=CA
+
+###
+// @no-log
+GET http://localhost:8000/chart/6/?state=CA

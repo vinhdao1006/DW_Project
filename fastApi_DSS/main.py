@@ -1,5 +1,4 @@
 from contextlib import asynccontextmanager
-from datetime import date
 from typing import Optional, Annotated
 import duckdb
 from fastapi import FastAPI, HTTPException, Depends
@@ -196,7 +195,7 @@ async def get_chart_data_5(state: Annotated[Optional[str], Query(alias="state")]
     try:
         res = db.execute("""
         SELECT 
-            strftime(date_trunc('year', a.Start_Time), '%Y') AS year, 
+            date_part('year', a.Start_Time) AS year, 
             a.Severity,
             COUNT(CASE WHEN e.Amenity THEN 1 END) AS Amenity, 
             COUNT(CASE WHEN e.Bump THEN 1 END) AS Bump, 
@@ -212,17 +211,41 @@ async def get_chart_data_5(state: Annotated[Optional[str], Query(alias="state")]
             COUNT(CASE WHEN e.Traffic_Signal THEN 1 END) AS Traffic_Signal, 
             COUNT(CASE WHEN e.Turning_Loop THEN 1 END) AS Turning_Loop
         FROM accident a 
-        JOIN environment e 
-        ON a.environment_id = e.environment_id 
-        JOIN location l 
-        ON a.location_id = l.location_id
+        JOIN environment e ON a.environment_id = e.environment_id 
+        JOIN location l ON a.location_id = l.location_id
         WHERE (? IS NULL OR l.State = ?) AND (? IS NULL OR l.City = ?)
-        GROUP BY strftime(date_trunc('year', a.Start_Time), '%Y'), a.Severity
+        GROUP BY date_part('year', a.Start_Time), a.Severity
         ORDER BY year, a.Severity;
         """, [state, state, city, city]).df()
         return Response(res.to_json(orient="records"), media_type="application/json")
     except Exception as e:
         raise HTTPException(
             status_code=500,
+            detail=f"Database error: {str(e)}"
+        )
+
+# noinspection SqlDialectInspection
+@app.get("/chart/6")
+async def get_chart_data_6(state: Annotated[Optional[str], Query(alias="state")] = None,
+                           city: Annotated[Optional[str], Query(alias="city")] = None,
+                           db: duckdb.DuckDBPyConnection = Depends(get_db)):
+    if city and not state:
+        raise HTTPException(
+            status_code=400,
+            detail="State must be provided if City is specified."
+        )
+
+    try:
+        res = db.execute("""
+                SELECT date_part('hour', a.Start_Time) as hour, date_part('year', a.Start_Time) as year, severity, COUNT(a.Accident_ID) as count
+                FROM accident a JOIN location l ON a.location_id = l.location_id
+                WHERE (? IS NULL OR l.State = ?) AND (? IS NULL OR l.City = ?) 
+                GROUP BY (date_part('hour', a.Start_Time), date_part('year', a.Start_Time), severity) 
+                ORDER BY year, hour, severity
+                """, [state, state, city, city]).df()
+        return Response(res.to_json(orient="records"), media_type="application/json")
+    except Exception as e:
+        raise HTTPException(
+            status_code=00,
             detail=f"Database error: {str(e)}"
         )
