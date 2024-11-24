@@ -1,0 +1,25 @@
+# Test your FastAPI endpoints
+// @no-log
+GET http://127.0.0.1:8000/
+Accept: application/json
+
+# health check
+###
+// @no-log
+GET http://localhost:8000/health
+
+###
+// @no-log
+GET http://localhost:8000/chart/1?state=CA
+
+###
+// @no-log
+GET http://localhost:8000/chart/2?state=CA
+
+###
+// @no-log
+GET http://localhost:8000/chart/3?state=CA
+
+###
+// @no-log
+GET http://localhost:8000/chart/5/?state=CA
