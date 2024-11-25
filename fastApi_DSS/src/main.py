@@ -136,6 +136,7 @@ class ETLManager:
         while True:
             try:
                 # DO NOT ENABLE ANY LINE. THE ORCHESTRATOR IS UNSTABLE.
+                print("ETL loop")
                 # self.etl.setup_connection()
                 # await self.schedule_next_run()
                 # Run ETL process
@@ -148,7 +149,7 @@ class ETLManager:
                     self.logger.exception("Detailed error information:")
 
             # Even if there's an error, continue the loop
-            await asyncio.sleep(60)  # Wait a minute before checking schedule again
+            await asyncio.sleep(60000)  # Wait a minute before checking schedule again
 
     def start(self) -> None:
         """Start the ETL background task"""
@@ -239,11 +240,11 @@ async def get_chart_data_1(state: Annotated[Optional[str], Query(alias="state")]
 
     try:
         res = db.execute("""
-                SELECT strftime(date_trunc('month', a.Start_Time), '%Y-%m') as month, COUNT(a.Accident_ID) as count
+                SELECT strftime(date_trunc('month', a.Start_Time), '%Y-%m') as month, Severity, COUNT(a.Accident_ID) as count
                 FROM accident a
                 JOIN location l ON a.Location_ID = l.Location_ID
                 WHERE (? IS NULL OR l.State = ?) AND (? IS NULL OR l.City = ?)
-                GROUP BY a.Start_Time
+                GROUP BY month, a.Severity
                 """, [state, state, city, city]).df()
         return Response(res.to_json(orient="records"), media_type="application/json")
     except Exception as e:
@@ -271,7 +272,7 @@ async def get_chart_data_2(state: Annotated[Optional[str], Query(alias="state")]
                 JOIN weather w ON a.Weather_Condition_ID = w.Weather_Condition_ID
                 JOIN location l ON a.Location_ID = l.Location_ID
                 WHERE (? IS NULL OR l.State = ?) AND (? IS NULL OR l.City = ?)
-                GROUP BY (date_trunc('month', a.Start_Time), Weather_Condition, Severity)
+                GROUP BY month, Weather_Condition, Severity
                 """, [state, state, city, city]).df()
         return Response(res.to_json(orient="records"), media_type="application/json")
     except Exception as e:
@@ -339,7 +340,7 @@ async def get_chart_data_5(state: Annotated[Optional[str], Query(alias="state")]
         JOIN environment e ON a.Environment_ID = e.Environment_ID 
         JOIN location l ON a.Location_ID = l.Location_ID
         WHERE (? IS NULL OR l.State = ?) AND (? IS NULL OR l.City = ?)
-        GROUP BY date_part('year', a.Start_Time), a.Severity
+        GROUP BY year, a.Severity
         ORDER BY year, a.Severity;
         """, [state, state, city, city]).df()
         return Response(res.to_json(orient="records"), media_type="application/json")
@@ -364,7 +365,7 @@ async def get_chart_data_6(state: Annotated[Optional[str], Query(alias="state")]
                 SELECT date_part('hour', a.Start_Time) as hour, date_part('year', a.Start_Time) as year, Severity, COUNT(a.Accident_ID) as count
                 FROM accident a JOIN location l ON a.Location_ID = l.Location_ID
                 WHERE (? IS NULL OR l.State = ?) AND (? IS NULL OR l.City = ?) 
-                GROUP BY (date_part('hour', a.Start_Time), date_part('year', a.Start_Time), Severity) 
+                GROUP BY hour, year, Severity 
                 ORDER BY year, hour, Severity
                 """, [state, state, city, city]).df()
         return Response(res.to_json(orient="records"), media_type="application/json")
