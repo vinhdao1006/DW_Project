@@ -295,9 +295,15 @@ async def get_chart_data_34(state: Annotated[Optional[str], Query(alias="state")
 
     try:
         res = db.execute("""
-                SELECT strftime(date_trunc('month', a.Start_Time), '%Y-%m') as month, Start_Lat, Start_Lng, Severity
-                FROM accident a JOIN location l ON a.Location_ID = l.Location_ID
+                SELECT 
+                    strftime(date_trunc('month', a.Start_Time), '%Y-%m') as month,
+                    ROUND(Start_Lat, 1) as grid_lat, 
+                    ROUND(Start_Lng, 1) as grid_lng, 
+                    COUNT(*) as accident_count
+                FROM accident a 
+                JOIN location l ON a.Location_ID = l.Location_ID
                 WHERE (? IS NULL OR l.State = ?) AND (? IS NULL OR l.City = ?)
+                GROUP BY month, grid_lat, grid_lng
                 """, [state, state, city, city]).df()
         return Response(res.to_json(orient="records"), media_type="application/json")
     except Exception as e:
@@ -306,6 +312,36 @@ async def get_chart_data_34(state: Annotated[Optional[str], Query(alias="state")
             detail=f"Database error: {str(e)}"
         )
 
+# noinspection SqlDialectInspection
+@app.get("/chart/4")
+async def get_chart_data_34(state: Annotated[Optional[str], Query(alias="state")] = None,
+                           city: Annotated[Optional[str], Query(alias="city")] = None,
+                           db: duckdb.DuckDBPyConnection = Depends(get_db)):
+    if city and not state:
+        raise HTTPException(
+            status_code=400,
+            detail="State must be provided if City is specified."
+        )
+
+    try:
+        res = db.execute("""
+                SELECT 
+                    strftime(date_trunc('month', a.Start_Time), '%Y-%m') as month,
+                    ROUND(Start_Lat, 1) as grid_lat, 
+                    ROUND(Start_Lng, 1) as grid_lng, 
+                    Severity,
+                    COUNT(*) as accident_count
+                FROM accident a 
+                JOIN location l ON a.Location_ID = l.Location_ID
+                WHERE (? IS NULL OR l.State = ?) AND (? IS NULL OR l.City = ?)
+                GROUP BY month, grid_lat, grid_lng, Severity
+                """, [state, state, city, city]).df()
+        return Response(res.to_json(orient="records"), media_type="application/json")
+    except Exception as e:
+        raise HTTPException(
+            status_code=00,
+            detail=f"Database error: {str(e)}"
+        )
 
 # noinspection SqlDialectInspection
 @app.get("/chart/5")
