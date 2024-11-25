@@ -27,3 +27,6 @@ GET http://localhost:8000/chart/5/?state=CA
 ###
 // @no-log
 GET http://localhost:8000/chart/6/?state=CA
+
+###
+GET http://localhost:8000/count_each_table

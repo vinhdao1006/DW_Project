@@ -22,7 +22,7 @@ class AppConfig(BaseSettings):
     POSTGRES_DB: str
     POSTGRES_USER: str
     POSTGRES_PASSWORD: str
-    ETL_RUN_TIME: str = "23:00"
+    ETL_RUN_TIME: str = "21:42"
     ETL_TIMEZONE: str = "Asia/Ho_Chi_Minh"
     SOURCE_TABLE: str
 
@@ -135,14 +135,10 @@ class ETLManager:
 
         while True:
             try:
-                # DO NOT ENABLE ANY LINE. THE ORCHESTRATOR IS UNSTABLE.
-                print("ETL loop")
                 # self.etl.setup_connection()
-                # await self.schedule_next_run()
+                await self.schedule_next_run()
                 # Run ETL process
-                # self.logger.info("Starting scheduled ETL run")
-                # self.etl.run_daily_etl(table_configs)
-                # self.logger.info("Completed scheduled ETL run")
+                self.etl.run_daily_etl(table_configs)
             except Exception as e:
                 self.logger.error(f"Error in ETL loop: {str(e)}")
                 if self.settings.DEBUG:
@@ -240,7 +236,8 @@ async def get_chart_data_1(state: Annotated[Optional[str], Query(alias="state")]
 
     try:
         res = db.execute("""
-                SELECT strftime(date_trunc('month', a.Start_Time), '%Y-%m') as month, Severity, COUNT(a.Accident_ID) as count
+                SELECT 
+                    strftime(date_trunc('month', a.Start_Time), '%Y-%m') as month, a.Severity, COUNT(a.Accident_ID) as Accident_Count
                 FROM accident a
                 JOIN location l ON a.Location_ID = l.Location_ID
                 WHERE (? IS NULL OR l.State = ?) AND (? IS NULL OR l.City = ?)
@@ -297,8 +294,9 @@ async def get_chart_data_34(state: Annotated[Optional[str], Query(alias="state")
         res = db.execute("""
                 SELECT 
                     strftime(date_trunc('month', a.Start_Time), '%Y-%m') as month,
-                    ROUND(Start_Lat, 1) as grid_lat, 
-                    ROUND(Start_Lng, 1) as grid_lng, 
+                    -- round to 1 decimal place for better performance on the Frontend
+                    ROUND(Start_Lat, 2) as grid_lat, 
+                    ROUND(Start_Lng, 2) as grid_lng, 
                     COUNT(*) as accident_count
                 FROM accident a 
                 JOIN location l ON a.Location_ID = l.Location_ID
@@ -408,5 +406,31 @@ async def get_chart_data_6(state: Annotated[Optional[str], Query(alias="state")]
     except Exception as e:
         raise HTTPException(
             status_code=00,
+            detail=f"Database error: {str(e)}"
+        )
+
+@app.get('/count_each_table')
+async def count_table(db: duckdb.DuckDBPyConnection = Depends(get_db)):
+    try:
+        accident = db.execute("""SELECT COUNT(*) FROM accident;""").df()
+        environment = db.execute("""SELECT COUNT(*) FROM environment;""").df()
+        location = db.execute("""SELECT COUNT(*) FROM location;""").df()
+        twilight = db.execute("""SELECT COUNT(*) FROM twilight;""").df()
+        weather = db.execute("""SELECT COUNT(*) FROM weather;""").df()
+        wind = db.execute("""SELECT COUNT(*) FROM wind;""").df()
+
+        res = {
+            "accident": accident.to_dict(orient="records")[0],
+            "environment": environment.to_dict(orient="records")[0],
+            "location": location.to_dict(orient="records")[0],
+            "twilight": twilight.to_dict(orient="records")[0],
+            "weather": weather.to_dict(orient="records")[0],
+            "wind": wind.to_dict(orient="records")[0],
+        }
+
+        return res
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
             detail=f"Database error: {str(e)}"
         )
