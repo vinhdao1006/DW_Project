@@ -1,2 +1,5 @@
 /.idea
 *.duckdb
+*.duckdb.wal
+*.log
+*.zip
