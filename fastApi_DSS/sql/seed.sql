@@ -7,37 +7,37 @@ INSERT INTO traffic_incidents (
     astronomical_twilight
 ) VALUES
 (
-    '2', NOW() - INTERVAL '1 HOUR', NOW(), 40.712776, -74.005974, 40.712776, -74.005974, 0.5,
-    'Accident reported near main street.', 'Main Street', 'New York', 'New York', 'NY',
-    NOW(), 50.0, 45.0, 70.0, 30.2, 5.0, 'NE', 10.0, 0.1, 'Rain',
-    FALSE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE,
-    FALSE, TRUE, FALSE, 'Day', 'Day', 'Day', 'Day'
+    '1', NOW() - INTERVAL '2 HOURS', NOW() - INTERVAL '1 HOUR', 37.774929, -122.419416, 37.774929, -122.419416, 0.7,
+    'Vehicle stalled on the shoulder.', 'Market St', 'San Francisco', 'San Francisco', 'CA',
+    NOW(), 58.0, 55.0, 75.0, 30.1, 8.0, 'W', 12.0, NULL, 'Cloudy',
+    FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE,
+    FALSE, FALSE, FALSE, 'Day', 'Day', 'Day', 'Day'
 ),
 (
-    '3', NOW() - INTERVAL '3 HOURS', NOW() - INTERVAL '2 HOURS', 34.052235, -118.243683, 34.052235, -118.243683, 1.2,
-    'Traffic signal malfunction causing delay.', 'Broadway', 'Los Angeles', 'Los Angeles', 'CA',
-    NOW(), 65.0, 60.0, 50.0, 29.8, 10.0, 'SW', 5.0, NULL, 'Clear',
-    FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE,
-    TRUE, TRUE, FALSE, 'Day', 'Day', 'Day', 'Day'
+    '3', NOW() - INTERVAL '4 HOURS', NOW() - INTERVAL '3 HOURS', 39.739236, -104.990251, 39.739236, -104.990251, 1.5,
+    'Icy conditions reported on overpass.', 'Colfax Ave', 'Denver', 'Denver', 'CO',
+    NOW(), 32.0, 28.0, 85.0, 29.7, 2.0, 'NE', 25.0, 0.4, 'Snow',
+    FALSE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, TRUE,
+    TRUE, TRUE, FALSE, 'Night', 'Night', 'Night', 'Night'
 ),
 (
-    '4', NOW() - INTERVAL '5 HOURS', NOW() - INTERVAL '4 HOURS', 41.878113, -87.629799, 41.878113, -87.629799, 2.5,
-    'Major accident blocking two lanes.', 'Michigan Ave', 'Chicago', 'Cook', 'IL',
-    NOW(), 45.0, 40.0, 85.0, 30.1, 3.0, 'E', 15.0, 0.2, 'Fog',
+    '2', NOW() - INTERVAL '1 DAY', NOW() - INTERVAL '23 HOURS', 25.761681, -80.191788, 25.761681, -80.191788, 1.0,
+    'Flooding on local streets.', 'Biscayne Blvd', 'Miami', 'Miami-Dade', 'FL',
+    NOW(), 77.0, NULL, 90.0, 29.9, 1.0, 'SE', 15.0, 1.2, 'Rain',
+    TRUE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, TRUE, TRUE,
+    FALSE, FALSE, FALSE, 'Day', 'Day', 'Day', 'Day'
+),
+(
+    '4', NOW() - INTERVAL '12 HOURS', NOW() - INTERVAL '11 HOURS', 36.162664, -86.781602, 36.162664, -86.781602, 3.5,
+    'Multi-car collision on highway.', 'I-65', 'Nashville', 'Davidson', 'TN',
+    NOW(), 40.0, 35.0, 80.0, 30.0, 4.5, 'N', 18.0, NULL, 'Fog',
     FALSE, FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, TRUE,
     FALSE, TRUE, FALSE, 'Night', 'Night', 'Night', 'Night'
 ),
 (
-    '1', NOW() - INTERVAL '30 MINUTES', NOW() - INTERVAL '15 MINUTES', 29.760427, -95.369804, 29.760427, -95.369804, 0.8,
-    'Minor collision with no injuries.', 'Westheimer Rd', 'Houston', 'Harris', 'TX',
-    NOW(), 72.0, NULL, 60.0, 29.9, 7.0, 'Calm', 0.0, 0.0, 'Cloudy',
-    TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE,
-    FALSE, TRUE, FALSE, 'Day', 'Day', 'Day', 'Day'
-),
-(
-    '2', NOW() - INTERVAL '6 HOURS', NOW() - INTERVAL '5 HOURS', 47.606209, -122.332069, 47.606209, -122.332069, 1.8,
-    'Slippery roads causing multiple skids.', 'Pike St', 'Seattle', 'King', 'WA',
-    NOW(), 38.0, 35.0, 90.0, 30.3, 2.5, 'NW', 20.0, 0.5, 'Snow',
-    FALSE, TRUE, FALSE, FALSE, TRUE, FALSE, TRUE, TRUE, FALSE, TRUE,
-    FALSE, TRUE, FALSE, 'Night', 'Night', 'Night', 'Night'
+    '2', NOW() - INTERVAL '3 HOURS', NOW() - INTERVAL '2 HOURS', 44.977753, -93.265011, 44.977753, -93.265011, 2.0,
+    'Traffic lights malfunction at intersection.', 'Hennepin Ave', 'Minneapolis', 'Hennepin', 'MN',
+    NOW(), 22.0, 18.0, 60.0, 30.2, 6.0, 'Variable', 10.0, 0.0, 'Clear',
+    FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE,
+    TRUE, TRUE, FALSE, 'Day', 'Day', 'Day', 'Day'
 );

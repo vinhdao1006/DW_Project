@@ -45,7 +45,7 @@ class DuckDBPostgresETL:
         try:
             self.setup_connection()
 
-            self.logger.info("Starting ETL")#
+            self.logger.info("Starting ETL")
 
             # noinspection SqlNoDataSourceInspection
             # noinspection SqlDialectInspection
