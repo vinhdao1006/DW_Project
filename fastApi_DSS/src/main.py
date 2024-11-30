@@ -409,6 +409,49 @@ async def get_chart_data_6(state: Annotated[Optional[str], Query(alias="state")]
             detail=f"Database error: {str(e)}"
         )
 
+
+@app.get("/chart/stats")
+async def get_stats(db: duckdb.DuckDBPyConnection = Depends(get_db)):
+    try:
+        total_counts = db.execute("""
+            SELECT
+                COUNT(*) FILTER (WHERE date_trunc('day', Start_Time) = CURRENT_DATE) AS total_accident_today,
+                COUNT(*) FILTER (WHERE date_trunc('day', Start_Time) = CURRENT_DATE - INTERVAL '1 day') AS total_yesterday
+            FROM accident;
+        """).df()
+
+        most_accident_city_this_month = db.execute("""
+            SELECT l.City, COUNT(*) as count
+            FROM accident a     
+            JOIN location l ON a.Location_ID = l.Location_ID
+            WHERE date_trunc('month', a.Start_Time) = date_trunc('month', CURRENT_DATE)
+            GROUP BY l.City
+            ORDER BY count DESC
+            LIMIT 1;
+        """).df()
+
+        count_each_severity_today = db.execute("""
+            SELECT Severity, COUNT(*) as count
+            FROM accident
+            WHERE date_trunc('day', Start_Time) = CURRENT_DATE
+            GROUP BY Severity;
+        """).df()
+
+        res = {
+            "total_accident_today": total_counts.to_dict(orient="records")[0],
+            "most_accident_city": most_accident_city_this_month.to_dict(orient="records")[0],
+            "count_each_severity_today": count_each_severity_today.to_dict(orient="records"),
+        }
+
+        return res
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Database error: {str(e)}"
+        )
+
+
 @app.get('/count_each_table')
 async def count_table(db: duckdb.DuckDBPyConnection = Depends(get_db)):
     try:
