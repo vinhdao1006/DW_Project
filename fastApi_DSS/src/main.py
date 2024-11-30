@@ -24,9 +24,8 @@ class AppConfig(BaseSettings):
     POSTGRES_DB: str
     POSTGRES_USER: str
     POSTGRES_PASSWORD: str
-    ETL_RUN_TIME: str = "21:42"
-    ETL_TIMEZONE: str = "Asia/Ho_Chi_Minh"
-    SOURCE_TABLE: str
+    ETL_RUN_TIME: str
+    ETL_TIMEZONE: str
 
     model_config = SettingsConfigDict(
         env_file="../.env",
@@ -160,29 +159,19 @@ class ETLManager:
         await asyncio.sleep(delay)
 
     async def run_etl_loop(self) -> None:
-        """
-        Run ETL process in a loop at scheduled times
-        source_table: Postgres table to extract data from
-        target_table: DuckDB table to load data into
-        """
-        table_configs = [
-            {"source_table": {self.settings.SOURCE_TABLE}, "target_table": "users_daily"},
-            # Add more table configurations as needed
-        ]
-
         while True:
             try:
                 # self.etl.setup_connection()
                 await self.schedule_next_run()
                 # Run ETL process
-                self.etl.run_daily_etl(table_configs)
+                self.etl.run_daily_etl()
             except Exception as e:
                 self.logger.error(f"Error in ETL loop: {str(e)}")
                 if self.settings.DEBUG:
                     self.logger.exception("Detailed error information:")
 
             # Even if there's an error, continue the loop
-            await asyncio.sleep(60000)  # Wait a minute before checking schedule again
+            await asyncio.sleep(600)  # Wait 10 minutes before checking schedule again
 
     def start(self) -> None:
         """Start the ETL background task"""

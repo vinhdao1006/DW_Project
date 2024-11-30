@@ -37,7 +37,7 @@ class DuckDBPostgresETL:
         if self.conn:
             self.conn.close()
 
-    def run_daily_etl(self, table_configs):
+    def run_daily_etl(self):
         """
         Run ETL process for configured tables
         table_configs: List of dicts with source_table and target_table
