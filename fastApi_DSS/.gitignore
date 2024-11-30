@@ -3,3 +3,5 @@
 *.duckdb.wal
 *.log
 *.zip
+*.py[cod]
+/__pycache__/

@@ -1,16 +1,18 @@
+import asyncio
 import logging
 from contextlib import asynccontextmanager
 from datetime import datetime, time, timedelta
 from typing import Optional, Annotated, Dict
+
 import duckdb
 import pytz
 from fastapi import FastAPI, HTTPException, Depends
 from fastapi import Response
 from fastapi.params import Query
 from pydantic_settings import BaseSettings, SettingsConfigDict
-import asyncio
 
 from orchestrator import DuckDBPostgresETL
+from database import TrafficIncidentCreate, TrafficIncident
 
 
 class AppConfig(BaseSettings):
@@ -41,8 +43,43 @@ class AppConfig(BaseSettings):
             "user": self.POSTGRES_USER,
             "password": self.POSTGRES_PASSWORD,
         }
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker, Session
+
 
 class DatabaseConnection:
+    _instance = None
+
+    def __new__(cls, setting: AppConfig):
+        if not cls._instance:
+            cls._instance = super(DatabaseConnection, cls).__new__(cls)
+            cls._setup_connection(setting)
+        return cls._instance
+
+    @classmethod
+    def _setup_connection(cls, setting: AppConfig):
+        try:
+            connection_string = f'postgresql://{setting.POSTGRES_USER}:{setting.POSTGRES_PASSWORD}@{setting.POSTGRES_HOST}:{setting.POSTGRES_PORT}/{setting.POSTGRES_DB}'
+            cls.engine = create_engine(connection_string)
+            cls.SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=cls.engine)
+        except Exception as e:
+            raise HTTPException(
+                status_code=500,
+                detail=f"Database connection error: {str(e)}"
+            )
+
+    @classmethod
+    def get_db(cls) -> Session:
+        db = None
+        try:
+            db = cls.SessionLocal()
+            yield db
+        finally:
+            if db:
+                db.close()
+
+
+class WarehouseConnection:
     _instance: Optional[duckdb.DuckDBPyConnection] = None
 
     @classmethod
@@ -71,9 +108,9 @@ class DatabaseConnection:
         return cls._instance is not None
 
 
-async def get_db() -> duckdb.DuckDBPyConnection:
+async def get_dw() -> duckdb.DuckDBPyConnection:
     """Dependency for getting database connection"""
-    conn = DatabaseConnection.get_connection()
+    conn = WarehouseConnection.get_connection()
     if not conn:
         raise HTTPException(
             status_code=500,
@@ -166,14 +203,17 @@ async def lifespan(app: FastAPI):
     etl_manager = None
     try:
         # Ensure DuckDB connection is only initialized once
-        if not DatabaseConnection.is_initialized():
-            DatabaseConnection.initialize(settings.DUCKDB_PATH)
+        if not WarehouseConnection.is_initialized():
+            WarehouseConnection.initialize(settings.DUCKDB_PATH)
         print(f"Connected to DuckDB at {settings.DUCKDB_PATH}")
         print(f"Debug mode: {settings.DEBUG}")
 
         # Initialize and start ETL manager
         etl_manager = ETLManager(settings)
         etl_manager.start()
+
+        # Initialize database connection
+        DatabaseConnection(settings)
 
         yield
     except Exception as e:
@@ -184,12 +224,22 @@ async def lifespan(app: FastAPI):
     finally:
         if etl_manager:
             etl_manager.stop()
-        DatabaseConnection.close()
+        WarehouseConnection.close()
         print("Closed DuckDB connection")
 
 
 # FastAPI application
-app = FastAPI(lifespan=lifespan)
+# app = FastAPI(lifespan=lifespan)
+
+app = FastAPI(
+        title="AIVerse",
+        description="AIVerse Api controller layer",
+        version="0.0.1",
+        openapi_url="/api/openapi.json",
+        docs_url="/api/docs",
+        redoc_url="/api/redoc",
+        lifespan=lifespan,
+    )
 
 @app.get("/")
 async def root():
@@ -197,7 +247,7 @@ async def root():
 
 # noinspection SqlDialectInspection
 @app.get("/health")
-async def health_check(db: duckdb.DuckDBPyConnection = Depends(get_db)):
+async def health_check(db: duckdb.DuckDBPyConnection = Depends(get_dw)):
     """Health check endpoint that verifies database connection"""
     try:
         # Simple query to verify database connection
@@ -227,7 +277,7 @@ async def health_check(db: duckdb.DuckDBPyConnection = Depends(get_db)):
 @app.get("/chart/1")
 async def get_chart_data_1(state: Annotated[Optional[str], Query(alias="state")] = None,
                            city: Annotated[Optional[str], Query(alias="city")] = None,
-                           db: duckdb.DuckDBPyConnection = Depends(get_db)):
+                           db: duckdb.DuckDBPyConnection = Depends(get_dw)):
     if city and not state:
         raise HTTPException(
             status_code=400,
@@ -255,7 +305,7 @@ async def get_chart_data_1(state: Annotated[Optional[str], Query(alias="state")]
 @app.get("/chart/2")
 async def get_chart_data_2(state: Annotated[Optional[str], Query(alias="state")] = None,
                            city: Annotated[Optional[str], Query(alias="city")] = None,
-                           db: duckdb.DuckDBPyConnection = Depends(get_db)):
+                           db: duckdb.DuckDBPyConnection = Depends(get_dw)):
     if city and not state:
         raise HTTPException(
             status_code=400,
@@ -282,8 +332,8 @@ async def get_chart_data_2(state: Annotated[Optional[str], Query(alias="state")]
 # noinspection SqlDialectInspection
 @app.get("/chart/3")
 async def get_chart_data_34(state: Annotated[Optional[str], Query(alias="state")] = None,
-                           city: Annotated[Optional[str], Query(alias="city")] = None,
-                           db: duckdb.DuckDBPyConnection = Depends(get_db)):
+                            city: Annotated[Optional[str], Query(alias="city")] = None,
+                            db: duckdb.DuckDBPyConnection = Depends(get_dw)):
     if city and not state:
         raise HTTPException(
             status_code=400,
@@ -313,8 +363,8 @@ async def get_chart_data_34(state: Annotated[Optional[str], Query(alias="state")
 # noinspection SqlDialectInspection
 @app.get("/chart/4")
 async def get_chart_data_34(state: Annotated[Optional[str], Query(alias="state")] = None,
-                           city: Annotated[Optional[str], Query(alias="city")] = None,
-                           db: duckdb.DuckDBPyConnection = Depends(get_db)):
+                            city: Annotated[Optional[str], Query(alias="city")] = None,
+                            db: duckdb.DuckDBPyConnection = Depends(get_dw)):
     if city and not state:
         raise HTTPException(
             status_code=400,
@@ -345,7 +395,7 @@ async def get_chart_data_34(state: Annotated[Optional[str], Query(alias="state")
 @app.get("/chart/5")
 async def get_chart_data_5(state: Annotated[Optional[str], Query(alias="state")] = None,
                            city: Annotated[Optional[str], Query(alias="city")] = None,
-                           db: duckdb.DuckDBPyConnection = Depends(get_db)):
+                           db: duckdb.DuckDBPyConnection = Depends(get_dw)):
     if city and not state:
         raise HTTPException(
             status_code=400,
@@ -388,7 +438,7 @@ async def get_chart_data_5(state: Annotated[Optional[str], Query(alias="state")]
 @app.get("/chart/6")
 async def get_chart_data_6(state: Annotated[Optional[str], Query(alias="state")] = None,
                            city: Annotated[Optional[str], Query(alias="city")] = None,
-                           db: duckdb.DuckDBPyConnection = Depends(get_db)):
+                           db: duckdb.DuckDBPyConnection = Depends(get_dw)):
     if city and not state:
         raise HTTPException(
             status_code=400,
@@ -409,8 +459,50 @@ async def get_chart_data_6(state: Annotated[Optional[str], Query(alias="state")]
             detail=f"Database error: {str(e)}"
         )
 
+
+@app.get("/chart/stats")
+async def get_stats(db: duckdb.DuckDBPyConnection = Depends(get_dw)):
+    try:
+        total_counts = db.execute("""
+            SELECT
+                COUNT(*) FILTER (WHERE date_trunc('day', Start_Time) = CURRENT_DATE) AS total_accident_today,
+                COUNT(*) FILTER (WHERE date_trunc('day', Start_Time) = CURRENT_DATE - INTERVAL '1 day') AS total_yesterday
+            FROM accident;
+        """).df()
+
+        most_accident_city_this_month = db.execute("""
+            SELECT l.City, COUNT(*) as count
+            FROM accident a     
+            JOIN location l ON a.Location_ID = l.Location_ID
+            WHERE date_trunc('month', a.Start_Time) = date_trunc('month', CURRENT_DATE)
+            GROUP BY l.City
+            ORDER BY count DESC
+            LIMIT 1;
+        """).df()
+
+        count_each_severity_today = db.execute("""
+            SELECT Severity, COUNT(*) as count
+            FROM accident
+            WHERE date_trunc('day', Start_Time) = CURRENT_DATE
+            GROUP BY Severity;
+        """).df()
+
+        res = {
+            "total_accident_today": total_counts.to_dict(orient="records")[0],
+            "most_accident_city": most_accident_city_this_month.to_dict(orient="records")[0],
+            "count_each_severity_today": count_each_severity_today.to_dict(orient="records"),
+        }
+
+        return res
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Database error: {str(e)}"
+        )
+
 @app.get('/count_each_table')
-async def count_table(db: duckdb.DuckDBPyConnection = Depends(get_db)):
+async def count_table(db: duckdb.DuckDBPyConnection = Depends(get_dw)):
     try:
         accident = db.execute("""SELECT COUNT(*) FROM accident;""").df()
         environment = db.execute("""SELECT COUNT(*) FROM environment;""").df()
@@ -429,6 +521,23 @@ async def count_table(db: duckdb.DuckDBPyConnection = Depends(get_db)):
         }
 
         return res
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Database error: {str(e)}"
+        )
+
+
+@app.post('/accident', response_model=TrafficIncidentCreate)
+def create_traffic_accident(accident: TrafficIncidentCreate, db: Session = Depends(DatabaseConnection.get_db)):
+    try:
+        # Insert accident record
+        db_accident = TrafficIncident(**accident.model_dump())
+
+        db.add(db_accident)
+        db.commit()
+        db.refresh(db_accident)
+        return accident
     except Exception as e:
         raise HTTPException(
             status_code=500,
