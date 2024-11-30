@@ -14,8 +14,8 @@ Base = declarative_base()
 
 
 class DayNightEnum(str, Enum):
-    DAY = 'Day'
-    NIGHT = 'Night'
+    Day = 'Day'
+    Night = 'Night'
 
 
 class WeatherConditionEnum(str, Enum):
@@ -34,14 +34,14 @@ class WeatherConditionEnum(str, Enum):
 
 class WindDirectionEnum(str, Enum):
     Calm = 'Calm'
-    West = 'W'
-    East = 'E'
-    South = 'S'
-    North = 'N'
-    Northeast = 'NE'
-    Southwest = 'SW'
-    Southeast = 'SE'
-    Northwest = 'NW'
+    W = 'W'
+    E = 'E'
+    S = 'S'
+    N = 'N'
+    NE = 'NE'
+    SW = 'SW'
+    SE = 'SE'
+    NW = 'NW'
     Variable = 'Variable'
 
 
