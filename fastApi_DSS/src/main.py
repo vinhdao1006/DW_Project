@@ -276,7 +276,7 @@ async def get_chart_data_1(state: Annotated[Optional[str], Query(alias="state")]
     try:
         res = db.execute("""
                 SELECT 
-                    strftime(date_trunc('month', a.Start_Time), '%Y-%m') as month, a.Severity, COUNT(a.Accident_ID) as Accident_Count
+                    strftime(date_trunc('month', a.Start_Time), '%Y-%m') as month, a.Severity, COUNT(a.Accident_ID) as count
                 FROM accident a
                 JOIN location l ON a.Location_ID = l.Location_ID
                 WHERE (? IS NULL OR l.State = ?) AND (? IS NULL OR l.City = ?)
@@ -450,12 +450,12 @@ async def get_chart_data_6(state: Annotated[Optional[str], Query(alias="state")]
 
 
 @app.get("/chart/stats")
-async def get_stats(db: duckdb.DuckDBPyConnection = Depends(get_dw)):
+async def get_stats(db: duckdb.DuckDBPyConnection = Depends(get_dw)): #CURRENT_DATE or '2016-05-25'
     try:
         total_counts = db.execute("""
             SELECT
-                COUNT(*) FILTER (WHERE date_trunc('day', Start_Time) = CURRENT_DATE) AS total_accident_today,
-                COUNT(*) FILTER (WHERE date_trunc('day', Start_Time) = CURRENT_DATE - INTERVAL '1 day') AS total_yesterday
+                COUNT(*) FILTER (WHERE date_trunc('day', Start_Time) = CAST('2016-05-25' AS DATE)) AS total_accident_today,
+                COUNT(*) FILTER (WHERE date_trunc('day', Start_Time) = CAST('2016-05-25' AS DATE) - INTERVAL '1 day') AS total_yesterday
             FROM accident;
         """).df()
 
@@ -463,23 +463,41 @@ async def get_stats(db: duckdb.DuckDBPyConnection = Depends(get_dw)):
             SELECT l.City, COUNT(*) as count
             FROM accident a     
             JOIN location l ON a.Location_ID = l.Location_ID
-            WHERE date_trunc('month', a.Start_Time) = date_trunc('month', CURRENT_DATE)
+            WHERE date_trunc('month', a.Start_Time) = date_trunc('month', CAST('2016-05-25' AS DATE))
             GROUP BY l.City
             ORDER BY count DESC
+            LIMIT 1;
+        """).df()
+
+        least_accident_city_this_month = db.execute("""
+            SELECT l.City, COUNT(*) as count
+            FROM accident a
+            JOIN location l ON a.Location_ID = l.Location_ID
+            WHERE date_trunc('month', a.Start_Time) = date_trunc('month', CAST('2016-05-25' AS DATE))
+            GROUP BY l.City
+            ORDER BY count ASC
             LIMIT 1;
         """).df()
 
         count_each_severity_today = db.execute("""
             SELECT Severity, COUNT(*) as count
             FROM accident
-            WHERE date_trunc('day', Start_Time) = CURRENT_DATE
+            WHERE date_trunc('day', Start_Time) = CAST('2016-05-25' AS DATE)
             GROUP BY Severity;
         """).df()
-
+        print("total_counts:", total_counts)
+        print("\n")
+        print("most_accident_city_this_month:", most_accident_city_this_month)
+        print("\n")
+        print("least_city_accidents_this_month:", least_accident_city_this_month)
+        print("\n")
+        print("count_each_severity_today:", count_each_severity_today)
+        print("\n")
         res = {
-            "total_accident_today": total_counts.to_dict(orient="records")[0],
-            "most_accident_city": most_accident_city_this_month.to_dict(orient="records")[0],
-            "count_each_severity_today": count_each_severity_today.to_dict(orient="records"),
+            "total_accident_today": total_counts.to_dict(orient="records")[0] if not total_counts.empty else {"count": 0},
+            "most_accident_city": most_accident_city_this_month.to_dict(orient="records")[0] if not most_accident_city_this_month.empty else {"City": "No Data", "count": 0},
+            "least_accident_city": least_accident_city_this_month.to_dict(orient="records")[0] if not least_accident_city_this_month.empty else {"City": "No Data", "count": 0},
+            "count_each_severity_today": count_each_severity_today.to_dict(orient="records") if not count_each_severity_today.empty else [],
         }
 
         return res

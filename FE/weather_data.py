@@ -1,8 +1,6 @@
 import subprocess
 from multiprocessing import Process
 import time
-from pymongo.mongo_client import MongoClient
-from pymongo.server_api import ServerApi
 import requests
 import json
 

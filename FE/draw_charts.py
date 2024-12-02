@@ -4,123 +4,179 @@ import plotly.express as px
 import requests
 
 
-def col3(df_accidents, current_time):
+def col3(current_time):
+    # #### Total accident ####
+    #     # Filter data for the selected day
+    #     df_accidents['Start_Time'] = pd.to_datetime(df_accidents['Start_Time'], format='mixed')  #mixed, '%Y/%m/%d %H:%M:%S.%f'
+    #     current_day = current_time.date()
+    #     previous_day = (current_time - pd.Timedelta(days=1)).date()
+
+    #     # Get accidents for the current day
+    #     current_day_accidents = df_accidents[df_accidents['Start_Time'].dt.date == current_day]
+    #     total_current_day = len(current_day_accidents)
+
+    #     # Get accidents for the previous day
+    #     previous_day_accidents = df_accidents[df_accidents['Start_Time'].dt.date == previous_day]
+    #     total_previous_day = len(previous_day_accidents)
+        
+    #     # Calculate percentage increase
+    #     if total_previous_day == 0:
+    #         percent_increase = "N/A (No accidents on the previous day)"
+    #     else:
+    #         percent_increase = f"{((total_current_day - total_previous_day) / total_previous_day) * 100}% from yesterday"
+        
+    #     value1 = total_current_day
+    #     delta1 = percent_increase
+
+    #     #### Most accident city THIS MONTH####
+    #     # Filter data for the current month
+    #     current_month_start = current_time.replace(day=1)  # Start of the current month
+    #     current_month_end = (current_month_start + pd.DateOffset(months=1)).replace(day=1) - pd.Timedelta(seconds=1)
+    #     #print(current_time, current_month_start, current_month_end)
+
+    #     # Filter accidents for the current month
+    #     current_month_accidents = df_accidents[
+    #         (df_accidents["Start_Time"] >= current_month_start) &
+    #         (df_accidents["Start_Time"] <= current_month_end)
+    #     ]
+
+    #     # Group by City to calculate accident counts
+    #     city_accident_counts_month = (
+    #         current_month_accidents.groupby("City")
+    #         .size()
+    #         .reset_index(name="Accident_Count")
+    #         .sort_values("Accident_Count", ascending=False)
+    #     )
+    #     if not city_accident_counts_month.empty:
+    #         # Get city with most accidents this month
+    #         most_accidents_city = city_accident_counts_month.iloc[0]  # First row (highest count)
+    #         most_accidents_name = most_accidents_city["City"]
+    #         most_accidents_total = most_accidents_city["Accident_Count"]
+
+    #         # Get city with least accidents this month (excluding cities with 0)
+    #         least_accidents_city = city_accident_counts_month.iloc[-1]  # Last row (lowest count)
+    #         least_accidents_name = least_accidents_city["City"]
+    #         least_accidents_total = least_accidents_city["Accident_Count"]
+
+    #         # Avoid division by zero or undefined data
+    #         if least_accidents_total == 0 or most_accidents_name == least_accidents_name:
+    #             delta_text = "N/A (No other city to compare)"
+    #         else:
+    #             delta_text = f"Least Accidents City: {least_accidents_name} with {least_accidents_total} accidents"
+    #     else:
+    #         most_accidents_name = "No Data"
+    #         most_accidents_total = 0
+    #         delta_text = "N/A"
+
+    #     value2 = f"{most_accidents_name} with {most_accidents_total} accidents"
+    #     delta2 = delta_text
+    #     #### Highest severity today ####
+    #     # Filter accidents for today
+    #     severity_today = (
+    #         current_day_accidents["Severity"]
+    #         .value_counts()
+    #         .reset_index(name="Accident_Count")
+    #         .rename(columns={"index": "Severity"})
+    #         .sort_values("Accident_Count", ascending=False)
+    #     )
+
+    #     if not severity_today.empty:
+    #         highest_severity_today = severity_today.iloc[0]  # Severity with highest accidents today
+    #         highest_severity_today_level = highest_severity_today["Severity"]
+    #         highest_severity_today_count = highest_severity_today["Accident_Count"]
+    #     else:
+    #         highest_severity_today_level = "No Data"
+    #         highest_severity_today_count = 0
+
+    #     # Filter accidents for yesterday
+    #     severity_yesterday = (
+    #         previous_day_accidents["Severity"]
+    #         .value_counts()
+    #         .reset_index(name="Accident_Count")
+    #         .rename(columns={"index": "Severity"})
+    #         .sort_values("Accident_Count", ascending=False)
+    #     )
+
+    #     if not severity_yesterday.empty:
+    #         highest_severity_yesterday = severity_yesterday.iloc[0]  # Severity with highest accidents yesterday
+    #         highest_severity_yesterday_level = highest_severity_yesterday["Severity"]
+    #         highest_severity_yesterday_count = highest_severity_yesterday["Accident_Count"]
+    #     else:
+    #         highest_severity_yesterday_level = "No Data"
+    #         highest_severity_yesterday_count = 0
+
+    #     # Set delta text
+    #     if highest_severity_today_count > 0 and highest_severity_yesterday_count > 0:
+    #         delta_text1 = (
+    #             f"Yesterday: Severity {highest_severity_yesterday_level} with {highest_severity_yesterday_count} accidents"
+    #         )
+    #     else:
+    #         delta_text1 = "No data for yesterday"
+
+    #     value3 = f"Severity {highest_severity_today_level} with {highest_severity_today_count} accidents"
+    #     delta3 = delta_text1
+
+    #     return value1, delta1, value2, delta2, value3, delta3
+
+
+
+        # Fetch the data from the backend API
+    response = requests.get("http://127.0.0.1:8000/chart/stats")
+    if response.status_code != 200:
+        raise ValueError(f"API error: {response.status_code}, {response.text}")
+    
+    # Parse the API response
+    data = response.json()
+
     #### Total accident ####
-        # Filter data for the selected day
-        df_accidents['Start_Time'] = pd.to_datetime(df_accidents['Start_Time'], format='%Y/%m/%d %H:%M:%S.%f')  #mixed, '%Y/%m/%d %H:%M:%S.%f'
-        current_day = current_time.date()
-        previous_day = (current_time - pd.Timedelta(days=1)).date()
+    # Extract today's and yesterday's accident counts
+    total_current_day = data["total_accident_today"].get("total_accident_today", 0)
+    total_previous_day = data["total_accident_today"].get("total_yesterday", 0)
+    
+    # Calculate percentage increase
+    if total_previous_day == 0:
+        percent_increase = "N/A (No accidents on the previous day)"
+    else:
+        percent_increase = f"{((total_current_day - total_previous_day) / total_previous_day) * 100:.2f}% from yesterday"
+    
+    value1 = total_current_day
+    delta1 = percent_increase
 
-        # Get accidents for the current day
-        current_day_accidents = df_accidents[df_accidents['Start_Time'].dt.date == current_day]
-        total_current_day = len(current_day_accidents)
+    #### Most accident city THIS MONTH ####
+    most_accident_city_data = data["most_accident_city"]
+    most_accidents_name = most_accident_city_data.get("City", "No Data")
+    most_accidents_total = most_accident_city_data.get("count", 0)
 
-        # Get accidents for the previous day
-        previous_day_accidents = df_accidents[df_accidents['Start_Time'].dt.date == previous_day]
-        total_previous_day = len(previous_day_accidents)
-        
-        # Calculate percentage increase
-        if total_previous_day == 0:
-            percent_increase = "N/A (No accidents on the previous day)"
-        else:
-            percent_increase = f"{((total_current_day - total_previous_day) / total_previous_day) * 100}% from yesterday"
-        
-        value1 = total_current_day
-        delta1 = percent_increase
+    least_accident_city_data = data["least_accident_city"]
+    least_accidents_name = least_accident_city_data.get("City", "No Data")
+    least_accidents_total = least_accident_city_data.get("count", 0)
 
-        #### Most accident city THIS MONTH####
-        # Filter data for the current month
-        current_month_start = current_time.replace(day=1)  # Start of the current month
-        current_month_end = (current_month_start + pd.DateOffset(months=1)).replace(day=1) - pd.Timedelta(seconds=1)
-        #print(current_time, current_month_start, current_month_end)
+    value2 = f"{most_accidents_name} with {most_accidents_total} accidents"
+    if most_accidents_name == least_accidents_name:
+        delta2 = "N/A (No other city to compare)"
+    else:
+        delta2 = f"Least Accidents City: {least_accidents_name} with {least_accidents_total} accidents"
 
-        # Filter accidents for the current month
-        current_month_accidents = df_accidents[
-            (df_accidents["Start_Time"] >= current_month_start) &
-            (df_accidents["Start_Time"] <= current_month_end)
-        ]
+    #### Highest severity today ####
+    severity_today = data["count_each_severity_today"]
+    if severity_today:
+        highest_severity_today = max(severity_today, key=lambda x: x["count"])
+        highest_severity_today_level = highest_severity_today["Severity"]
+        highest_severity_today_count = highest_severity_today["count"]
+    else:
+        highest_severity_today_level = "No Data"
+        highest_severity_today_count = 0
 
-        # Group by City to calculate accident counts
-        city_accident_counts_month = (
-            current_month_accidents.groupby("City")
-            .size()
-            .reset_index(name="Accident_Count")
-            .sort_values("Accident_Count", ascending=False)
-        )
-        if not city_accident_counts_month.empty:
-            # Get city with most accidents this month
-            most_accidents_city = city_accident_counts_month.iloc[0]  # First row (highest count)
-            most_accidents_name = most_accidents_city["City"]
-            most_accidents_total = most_accidents_city["Accident_Count"]
+    # Delta for severity (comparison with yesterday not included in API data)
+    delta3 = "Comparison data for severity not provided"
 
-            # Get city with least accidents this month (excluding cities with 0)
-            least_accidents_city = city_accident_counts_month.iloc[-1]  # Last row (lowest count)
-            least_accidents_name = least_accidents_city["City"]
-            least_accidents_total = least_accidents_city["Accident_Count"]
+    value3 = f"Severity {highest_severity_today_level} with {highest_severity_today_count} accidents"
 
-            # Avoid division by zero or undefined data
-            if least_accidents_total == 0 or most_accidents_name == least_accidents_name:
-                delta_text = "N/A (No other city to compare)"
-            else:
-                delta_text = f"Least Accidents City: {least_accidents_name} with {least_accidents_total} accidents"
-        else:
-            most_accidents_name = "No Data"
-            most_accidents_total = 0
-            delta_text = "N/A"
-
-        value2 = f"{most_accidents_name} with {most_accidents_total} accidents"
-        delta2 = delta_text
-        #### Highest severity today ####
-        # Filter accidents for today
-        severity_today = (
-            current_day_accidents["Severity"]
-            .value_counts()
-            .reset_index(name="Accident_Count")
-            .rename(columns={"index": "Severity"})
-            .sort_values("Accident_Count", ascending=False)
-        )
-
-        if not severity_today.empty:
-            highest_severity_today = severity_today.iloc[0]  # Severity with highest accidents today
-            highest_severity_today_level = highest_severity_today["Severity"]
-            highest_severity_today_count = highest_severity_today["Accident_Count"]
-        else:
-            highest_severity_today_level = "No Data"
-            highest_severity_today_count = 0
-
-        # Filter accidents for yesterday
-        severity_yesterday = (
-            previous_day_accidents["Severity"]
-            .value_counts()
-            .reset_index(name="Accident_Count")
-            .rename(columns={"index": "Severity"})
-            .sort_values("Accident_Count", ascending=False)
-        )
-
-        if not severity_yesterday.empty:
-            highest_severity_yesterday = severity_yesterday.iloc[0]  # Severity with highest accidents yesterday
-            highest_severity_yesterday_level = highest_severity_yesterday["Severity"]
-            highest_severity_yesterday_count = highest_severity_yesterday["Accident_Count"]
-        else:
-            highest_severity_yesterday_level = "No Data"
-            highest_severity_yesterday_count = 0
-
-        # Set delta text
-        if highest_severity_today_count > 0 and highest_severity_yesterday_count > 0:
-            delta_text1 = (
-                f"Yesterday: Severity {highest_severity_yesterday_level} with {highest_severity_yesterday_count} accidents"
-            )
-        else:
-            delta_text1 = "No data for yesterday"
-
-        value3 = f"Severity {highest_severity_today_level} with {highest_severity_today_count} accidents"
-        delta3 = delta_text1
-
-        return value1, delta1, value2, delta2, value3, delta3
+    return value1, delta1, value2, delta2, value3, delta3
 
         
 
-def chart1(df_accidents, granularity, state=None, city=None):
+def chart1(granularity, state=None, city=None):
     # if granularity == "USA":
     #     filtered_df = df_accidents
     # elif granularity == "State" and state:
@@ -192,7 +248,7 @@ def chart1(df_accidents, granularity, state=None, city=None):
 
     return fig
 
-def chart2(df_accidents, granularity, state=None, city=None):
+def chart2(granularity, state=None, city=None):
     # if granularity == "USA":
     #     filtered_df = df_accidents
     # elif granularity == "State" and state:
@@ -257,7 +313,7 @@ def chart2(df_accidents, granularity, state=None, city=None):
     return fig
 
 
-def chart3(df_accidents, granularity, state=None, city=None):
+def chart3(granularity, state=None, city=None):
     # if granularity == "USA":
     #     filtered_df = df_accidents
     # elif granularity == "State" and state:
@@ -315,7 +371,7 @@ def chart3(df_accidents, granularity, state=None, city=None):
     return fig
 
 
-def chart4(df_accidents, granularity, state=None, city=None):
+def chart4(granularity, state=None, city=None):
     # if granularity == "USA":
     #     filtered_df = df_accidents
     # elif granularity == "State" and state:
@@ -386,7 +442,7 @@ def chart4(df_accidents, granularity, state=None, city=None):
     return fig
 
 
-def chart5(df_accidents, granularity, state=None, city=None):
+def chart5(granularity, state=None, city=None):
     # if granularity == "USA":
     #     filtered_df = df_accidents
     # elif granularity == "State" and state:
@@ -465,7 +521,7 @@ def chart5(df_accidents, granularity, state=None, city=None):
     return fig
 
 
-def chart6(df_accidents, granularity, state=None, city=None):
+def chart6(granularity, state=None, city=None):
     # if granularity == "USA":
     #     filtered_df = df_accidents
     # elif granularity == "State" and state:
