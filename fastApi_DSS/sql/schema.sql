@@ -1,4 +1,3 @@
-CREATE TYPE severity AS ENUM ('1', '2', '3', '4');
 CREATE TYPE day_night AS ENUM ('Day', 'Night');
 CREATE TYPE weather_condition AS ENUM ('Clear', 'Cloudy', 'Fog', 'Hail', 'Rain', 'Sand', 'Smoke', 'Snow', 'Thunderstorm', 'Tornado', 'Windy');
 CREATE TYPE wind_direction AS ENUM('Calm', 'W', 'E', 'S', 'N', 'NE', 'SW', 'SE', 'NW', 'Variable');
@@ -12,7 +11,7 @@ CREATE TYPE us_state_enum AS ENUM (
 
 CREATE TABLE traffic_incidents (
     id SERIAL PRIMARY KEY,
-    severity severity,
+    severity INT,
     start_time TIMESTAMP NOT NULL,
     end_time TIMESTAMP,
     start_lat DOUBLE PRECISION,
@@ -56,6 +55,8 @@ CREATE TABLE traffic_incidents (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
+
+ALTER TABLE traffic_incidents ADD CONSTRAINT severity_check CHECK (severity BETWEEN 1 AND 4);
 
 CREATE OR REPLACE FUNCTION update_updated_at_column()
 RETURNS TRIGGER AS $$
