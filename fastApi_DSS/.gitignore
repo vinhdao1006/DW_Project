@@ -5,4 +5,3 @@
 *.zip
 *.py[cod]
 /__pycache__/
-.env
