@@ -248,3 +248,58 @@ class TrafficIncidentCreate(BaseModel):
                 }
             ]
         }
+
+class PredictAccidentRequest(BaseModel):
+    """
+    Pydantic model for validating and serializing traffic incident data
+    """
+    # Severity and Temporal Information
+    start_time: datetime
+    start_lat: Optional[float] = Field(None, ge=-90, le=90)
+    start_lng: Optional[float] = Field(None, ge=-180, le=180)
+    distance_mi: Optional[float] = Field(None, ge=0)
+    city: Optional[str] = Field(None, max_length=100)
+    temperature_f: Optional[float] = Field(None, ge=-50, le=150)
+    wind_chill_f: Optional[float] = Field(None, ge=-50, le=150)
+    humidity_percent: Optional[float] = Field(None, ge=0, le=100)
+    pressure_in: Optional[float] = Field(None, ge=0, le=50)
+    visibility_mi: Optional[float] = Field(None, ge=0)
+    wind_direction: Optional[WindDirectionEnum] = None
+    wind_speed_mph: Optional[float] = Field(None, ge=0)
+    precipitation_in: Optional[float] = Field(None, ge=0)
+    weather_condition: Optional[WeatherConditionEnum] = None
+    civil_twilight: Optional[DayNightEnum] = None
+
+    # Custom Validators
+    @classmethod
+    @field_validator('start_time')
+    def validate_start_time(cls, v):
+        if v is None:
+            raise ValueError("Start time must be provided")
+        return v
+
+    class Config:
+        # Allow arbitrary types for enum-like string inputs
+        use_enum_values = True
+        # Example of additional JSON Schema validation
+        json_schema_extra = {
+            "examples": [
+                {
+                    "start_time": "2023-06-15T10:30:00",
+                    "start_lat": 37.7749,
+                    "start_lng": -122.4194,
+                    "distance_mi": 0.5,
+                    "city": "San Francisco",
+                    "temperature_f": 70,
+                    "wind_chill_f": 70,
+                    "humidity_percent": 50,
+                    "pressure_in": 30,
+                    "visibility_mi": 10,
+                    "wind_direction": "W",
+                    "wind_speed_mph": 5,
+                    "precipitation_in": 0,
+                    "weather_condition": "Clear",
+                    "civil_twilight": "Day"
+                }
+            ]
+        }

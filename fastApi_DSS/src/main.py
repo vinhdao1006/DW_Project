@@ -4,15 +4,20 @@ from contextlib import asynccontextmanager
 from datetime import datetime, time, timedelta
 from typing import Optional, Annotated, Dict
 
+import category_encoders
 import duckdb
+import pandas as pd
 import pytz
 from fastapi import FastAPI, HTTPException, Depends
 from fastapi import Response
 from fastapi.params import Query
 from pydantic_settings import BaseSettings, SettingsConfigDict
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.preprocessing import MinMaxScaler
 
 from orchestrator import DuckDBPostgresETL
 from database import TrafficIncidentCreate, TrafficIncident
+from database import PredictAccidentRequest
 
 
 class AppConfig(BaseSettings):
@@ -550,3 +555,144 @@ def create_traffic_accident(accident: TrafficIncidentCreate, db: Session = Depen
             status_code=500,
             detail=f"Database error: {str(e)}"
         )
+
+### Prediction API
+import os
+import joblib
+from typing import Any, Optional
+from sklearn.ensemble import RandomForestClassifier
+
+
+class MLModelsLoader:
+    _instance: Optional['MLModelsLoader'] = None
+
+    def __new__(cls, models_path: str = "../models"):
+        if not cls._instance:
+            cls._instance = super(MLModelsLoader, cls).__new__(cls)
+            cls._instance._initialize(models_path)
+        return cls._instance
+
+    def _initialize(self, models_path: str):
+        # Construct full paths to the model files
+        binary_encoder_path = os.path.join(models_path, "binary_encoder.joblib")
+        random_forest_path = os.path.join(models_path, "random_forest_model.joblib")
+        scaler_path = os.path.join(models_path, "scaler.joblib")
+
+        # Load models with error handling
+        try:
+            self._binary_encoder = joblib.load(binary_encoder_path)
+            self._random_forest_model = joblib.load(random_forest_path)
+            self._scaler = joblib.load(scaler_path)
+        except FileNotFoundError as e:
+            raise FileNotFoundError(f"Model file not found: {e}")
+        except Exception as e:
+            raise RuntimeError(f"Error loading models: {e}")
+
+    def get_binary_encoder(self) -> category_encoders.BinaryEncoder:
+        return self._binary_encoder
+
+    def get_random_forest_model(self) -> RandomForestClassifier:
+        return self._random_forest_model
+
+    def get_scaler(self) -> MinMaxScaler:
+        return self._scaler
+
+
+# FastAPI dependency function to use in route handlers
+def get_ml_models() -> MLModelsLoader:
+    return MLModelsLoader()
+
+@app.post('/predict')
+def predict_accident_severity(data: PredictAccidentRequest, ml_models: MLModelsLoader = Depends(get_ml_models)):
+    basic_info = pd.DataFrame({
+        "Temperature(F)": [data.temperature_f],
+        "Distance(mi)": [data.distance_mi],
+        "Humidity(%)": [data.humidity_percent],
+        "Pressure(in)": [data.pressure_in],
+        "Visibility(mi)": [data.visibility_mi],
+        "Wind_Speed(mph)": [data.wind_speed_mph],
+        "Precipitation(in)": [data.precipitation_in],
+        "Start_Lng": [data.start_lng],
+        "Start_Lat": [data.start_lat],
+    })
+    time_ = pd.DataFrame({
+        "Year": [data.start_time.year],
+        "Month": [data.start_time.month],
+        "Weekday": [data.start_time.weekday()],
+        "Day": [data.start_time.day],
+        "Hour": [data.start_time.hour],
+        "Minute": [data.start_time.minute],
+    })
+    features = ['Temperature(F)', 'Distance(mi)', 'Humidity(%)', 'Pressure(in)', 'Visibility(mi)', 'Wind_Speed(mph)',
+                'Precipitation(in)', 'Start_Lng', 'Start_Lat', 'Year', 'Month', 'Weekday', 'Day', 'Hour', 'Minute']
+    scaler = ml_models.get_scaler()
+    basic_and_time = pd.concat([basic_info, time_], axis=1)
+    basic_and_time[features] = scaler.transform(basic_and_time[features])
+
+    basic_info = basic_and_time[['Start_Lat', 'Start_Lng', 'Distance(mi)', 'Temperature(F)', 'Humidity(%)',
+                                 'Pressure(in)', 'Visibility(mi)', 'Wind_Speed(mph)', 'Precipitation(in)']]
+    time_ = basic_and_time.iloc[:, -6:]
+
+    road = pd.DataFrame({
+        "Amenity": [0],
+        "Bump": [0],
+        "Crossing": [0],
+        "Give_Way": [0],
+        "Junction": [0],
+        "No_Exit": [0],
+        "Railway": [0],
+        "Roundabout": [0],
+        "Station": [0],
+        "Stop": [0],
+        "Traffic_Calming": [0],
+        "Traffic_Signal": [0]
+    })
+
+    wind = pd.DataFrame({
+        "Wind_Direction_E": [0],
+        "Wind_Direction_N": [0],
+        "Wind_Direction_NE": [0],
+        "Wind_Direction_NW": [0],
+        "Wind_Direction_S": [0],
+        "Wind_Direction_SE": [0],
+        "Wind_Direction_SW": [0],
+        "Wind_Direction_Variable": [0],
+        "Wind_Direction_W": [0]
+    })
+
+    for col in wind.columns:
+        if data.wind_direction == col.split('_')[-1]:
+            wind[col] = [1]
+
+
+    weather = pd.DataFrame({
+        "Weather_Condition_Cloudy": [0],
+        "Weather_Condition_Fog": [0],
+        "Weather_Condition_Hail": [0],
+        "Weather_Condition_Rain": [0],
+        "Weather_Condition_Sand": [0],
+        "Weather_Condition_Smoke": [0],
+        "Weather_Condition_Snow": [0],
+        "Weather_Condition_Thunderstorm": [0],
+        "Weather_Condition_Tornado": [0],
+        "Weather_Condition_Windy": [0]
+    })
+    for col in weather.columns:
+        if data.weather_condition == col.split('_')[-1]:
+            weather[col] = [1]
+
+    twilight = pd.DataFrame({
+        "Civil_Twilight_Night": [1 if data.civil_twilight == "Night" else 0]
+    })
+
+    city = pd.DataFrame({
+        "City": [data.city]
+    })
+    binary_enc = ml_models.get_binary_encoder()
+    city = binary_enc.transform(city['City'])
+
+    X = pd.concat([basic_info, road, time_, wind, weather, twilight, city], axis=1)
+
+    model = ml_models.get_random_forest_model()
+    prediction = model.predict(X)
+    return {"severity": int(prediction[0])}
