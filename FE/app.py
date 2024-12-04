@@ -280,6 +280,9 @@ if selected_page == "Report":
             "weather_condition": weather_conditions.get("main", "Clear")
         }
 
+        if weather_report["weather_condition"] == "Clouds":
+            weather_report["weather_condition"] = "Cloudy"
+
         wind_direction_map = {
             0: 'Calm',  # Calm winds
             1: 'N',     # North
