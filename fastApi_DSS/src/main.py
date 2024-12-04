@@ -695,4 +695,5 @@ def predict_accident_severity(data: PredictAccidentRequest, ml_models: MLModelsL
 
     model = ml_models.get_random_forest_model()
     prediction = model.predict(X)
-    return {"severity": int(prediction[0])}
+    #return {"severity": int(prediction[0])}
+    return int(prediction[0])
