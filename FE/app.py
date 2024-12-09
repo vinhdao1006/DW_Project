@@ -287,6 +287,18 @@ if selected_page == "Report":
 
             if weather_report["weather_condition"] == "Clouds":
                 weather_report["weather_condition"] = "Cloudy"
+            if weather_report["weather_condition"] == "Drizzle":
+                weather_report["weather_condition"] = "Rain"
+            if weather_report["weather_condition"] == "Mist":
+                weather_report["weather_condition"] = "Fog"
+            if weather_report["weather_condition"] == "Haze":
+                weather_report["weather_condition"] = "Fog"
+            if weather_report["weather_condition"] == "Dust":
+                weather_report["weather_condition"] = "Sand"
+            if weather_report["weather_condition"] == "Ash":
+                weather_report["weather_condition"] = "Sand"
+            if weather_report["weather_condition"] == "Squall":
+                weather_report["weather_condition"] = "Windy"
 
             wind_direction_map = {
                 0: 'Calm',  # Calm winds
@@ -504,6 +516,18 @@ if selected_page == "Report":
 
             if weather_report["weather_condition"] == "Clouds":
                 weather_report["weather_condition"] = "Cloudy"
+            if weather_report["weather_condition"] == "Drizzle":
+                weather_report["weather_condition"] = "Rain"
+            if weather_report["weather_condition"] == "Mist":
+                weather_report["weather_condition"] = "Fog"
+            if weather_report["weather_condition"] == "Haze":
+                weather_report["weather_condition"] = "Fog"
+            if weather_report["weather_condition"] == "Dust":
+                weather_report["weather_condition"] = "Sand"
+            if weather_report["weather_condition"] == "Ash":
+                weather_report["weather_condition"] = "Sand"
+            if weather_report["weather_condition"] == "Squall":
+                weather_report["weather_condition"] = "Windy"
 
             wind_direction_map = {
                 0: 'Calm',  # Calm winds
