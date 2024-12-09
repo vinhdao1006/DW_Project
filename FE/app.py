@@ -241,342 +241,351 @@ if selected_page == "Report":
         
         # get lat, lon
         address = street + " " + city + " " + county + " " + state
-        lat, lon = get_lat_lon(address)
-        
-        # get weather data
-        weather_data = get_weather_data(lat, lon)
-        print(address)
-        print(weather_data)
-        
-        ## highest_id = 0
-        
-        ## last_record = reports_collection.find_one({}, sort=[("_id", pymongo.DESCENDING)])
+        lat_lon = get_lat_lon(address)
 
-        ## if last_record:
-        ##     highest_id = int(last_record["ID"].split("-")[1])
-
-        # If collection is empty, start ID from 1
-        ## new_id = f"A-{highest_id + 1 if highest_id > 0 else 1}"
-        # for report in reports_collection.find().sort([("ID", pymongo.DESCENDING)]).limit(1):
-        #     highest_id = int(report["ID"].split("-")[1])
-
-        start_time = datetime.now()
-        end_time = start_time + timedelta(minutes=duration_minutes)
-        round_time = start_time
-
-        weather_main = weather_data.get("main", {})
-        weather_wind = weather_data.get("wind", {})
-        weather_conditions = weather_data.get("weather", [{}])[0]
-        
-        weather_report = {
-            "weather_timestamp": round_time,
-            "temperature_f": round((weather_main.get("temp", 0) - 273.15) * 9/5 + 32, 2),
-            "wind_chill_f": "",
-            "humidity_percent": weather_main.get("humidity", ""),
-            "pressure_in": round(weather_main.get("pressure", 0) * 0.02953, 2),
-            "visibility_mi": round(weather_data.get("visibility", 0) / 1609.34, 2),
-            "wind_direction": weather_wind.get("deg", 0),
-            "wind_speed_mph": round(weather_wind.get("speed", 0) * 2.23694, 2),
-            "precipitation_in": weather_data.get("rain", {}).get("1h", 0),
-            "weather_condition": weather_conditions.get("main", "Clear")
-        }
-
-        if weather_report["weather_condition"] == "Clouds":
-            weather_report["weather_condition"] = "Cloudy"
-
-        wind_direction_map = {
-            0: 'Calm',  # Calm winds
-            1: 'N',     # North
-            2: 'NE',    # North-East
-            3: 'E',     # East
-            4: 'SE',    # South-East
-            5: 'S',     # South
-            6: 'SW',    # South-West
-            7: 'W',     # West
-            8: 'NW',    # North-West
-            360: 'Calm',  # Calm (for 360 degrees)
-        }
-
-        final_wind_direction =  get_wind_direction.get_wind_direction(weather_report.get("wind_direction"), weather_report.get("wind_speed_mph"))
-
-        # Example location for now (modify as needed based on state/city input)
-        location = LocationInfo(city, "US", "UTC", lat, lon)
-
-        # Get current sun times for the location
-        s = sun(location.observer, date=datetime.now().date())
-
-        # Assume s['sunrise'] and s['sunset'] have a timezone (e.g., UTC or any other)
-        timezone = s['sunrise'].tzinfo  # Extract timezone from the datetime
-        current_time = datetime.now(pytz.utc).astimezone(timezone)  # Localize to match sunrise/sunset
-
-
-        # st.write(s.keys())
-        # Determine day or night
-        sunrise_sunset = "Day" if s['sunrise'] <= current_time <= s['sunset'] else "Night"
-        civil_twilight = "Day" if s['dawn'] <= current_time <= s['dusk'] else "Night"
-        nautical_twilight = "Day" if s['dawn'] <= current_time <= s['dusk'] else "Night"
-        astronomical_twilight = "Day" if s['dawn'] <= current_time <= s['dusk'] else "Night"
-
-        # report = {
-        #     "ID": new_id,
-        #     "Source": "Source2",
-        #     "Severity": severity,
-        #     "Start_Time": start_time,
-        #     "End_Time": end_time.strftime("%Y-%m-%d %H:%M:%S"),
-        #     "Start_Lat": lat,
-        #     "Start_Lng": lon,
-        #     "End_Lat": "",
-        #     "End_Lng": "",
-        #     "Distance(mi)": 0,
-        #     "Description": description,
-        #     "Street": street,
-        #     "City": city,
-        #     "County": county,
-        #     "State": state,
-        #     "Zipcode": 0,
-        #     "Country": "US",
-        #     "Timezone": "US/Pacific",
-        #     "Airport_Code": "",
-        #     **weather_report,
-        #     "Amenity": amenity,
-        #     "Bump": bump,
-        #     "Crossing": crossing,
-        #     "Give_Way": give_way,
-        #     "Junction": junction,
-        #     "No_Exit": no_exit,
-        #     "Railway": railway,
-        #     "Roundabout": roundabout,
-        #     "Station": station,
-        #     "Stop": stop,
-        #     "Traffic_Calming": traffic_calming,
-        #     "Traffic_Signal": traffic_signal,
-        #     "Turning_Loop": turning_loop,
-        #     "Sunrise_Sunset": sunrise_sunset,
-        #     "Civil_Twilight": civil_twilight,
-        #     "Nautical_Twilight": nautical_twilight,
-        #     "Astronomical_Twilight": astronomical_twilight
-        # }
-
-
-        # report = TrafficIncidentCreate(
-        #     severity=severity,
-        #     start_time=start_time,
-        #     end_time=end_time,
-        #     start_lat=lat,
-        #     start_lng=lon,
-        #     description=description,
-        #     street=street,
-        #     city=city,
-        #     county=county,
-        #     state=state,
-        #     weather_timestamp=round_time,
-        #     temperature_f=weather_report.get("temperature_f"),
-        #     humidity_percent=weather_report.get("humidity_percent"),
-        #     pressure_in=weather_report.get("pressure_in"),
-        #     visibility_mi=weather_report.get("visibility_mi"),
-        #     wind_direction=final_wind_direction,
-        #     wind_speed_mph=weather_report.get("wind_speed_mph"),
-        #     precipitation_in=weather_report.get("precipitation_in"),
-        #     weather_condition=weather_report.get("weather_condition"),
-        #     amenity=amenity,
-        #     bump=bump,
-        #     crossing=crossing,
-        #     give_way=give_way,
-        #     junction=junction,
-        #     no_exit=no_exit,
-        #     railway=railway,
-        #     roundabout=roundabout,
-        #     station=station,
-        #     stop=stop,
-        #     traffic_calming=traffic_calming,
-        #     traffic_signal=traffic_signal,
-        #     turning_loop=turning_loop,
-        #     sunrise_sunset=sunrise_sunset,
-        #     civil_twilight=civil_twilight,
-        #     nautical_twilight=nautical_twilight,
-        #     astronomical_twilight=astronomical_twilight
-        # )
-
-        report = {
-            "severity": severity,
-            "start_time": start_time.strftime("%Y-%m-%d %H:%M:%S"),
-            "end_time": end_time.strftime("%Y-%m-%d %H:%M:%S"),
-            "start_lat": lat,
-            "start_lng":  lon,
-            "description":  description,
-            "street":  street,
-            "city":  city,
-            "county":  county,
-            "state":  state,
-            "weather_timestamp":  round_time.strftime("%Y-%m-%d %H:%M:%S"),
-            "temperature_f":  weather_report.get("temperature_f"),
-            "humidity_percent":  weather_report.get("humidity_percent"),
-            "pressure_in":  weather_report.get("pressure_in"),
-            "visibility_mi":  weather_report.get("visibility_mi"),
-            "wind_direction":  final_wind_direction,
-            "wind_speed_mph":  weather_report.get("wind_speed_mph"),
-            "precipitation_in":  weather_report.get("precipitation_in"),
-            "weather_condition":  weather_report.get("weather_condition"),
-            "amenity":  amenity,
-            "bump":  bump,
-            "crossing":  crossing,
-            "give_way":  give_way,
-            "junction":  junction,
-            "no_exit":  no_exit,
-            "railway":  railway,
-            "roundabout":  roundabout,
-            "station":  station,
-            "stop":  stop,
-            "traffic_calming":  traffic_calming,
-            "traffic_signal":  traffic_signal,
-            "turning_loop":  turning_loop,
-            "sunrise_sunset":  sunrise_sunset,
-            "civil_twilight":  civil_twilight,
-            "nautical_twilight":  nautical_twilight,
-            "astronomical_twilight":  astronomical_twilight
-            }
+        if lat_lon is None:
+            st.error("Address not found! Please check the details and try again.")
+        else:
+            lat, lon = lat_lon
+            # get weather data
+            weather_data = get_weather_data(lat, lon)
+            print(address)
+            print(weather_data)
             
-        
-        #  #to insert to postgresql
-        # reports_collection.insert_one(report)
-        
-        response_data_model = requests.post(
-            "http://127.0.0.1:8000/accident", 
-            json=report
-        )
-        if response_data_model.status_code != 200:
-            raise ValueError(f"API error: {response_data_model.status_code}, {response_data_model.text}")
-        st.success("Report submitted successfully!")
+            ## highest_id = 0
+            
+            ## last_record = reports_collection.find_one({}, sort=[("_id", pymongo.DESCENDING)])
+
+            ## if last_record:
+            ##     highest_id = int(last_record["ID"].split("-")[1])
+
+            # If collection is empty, start ID from 1
+            ## new_id = f"A-{highest_id + 1 if highest_id > 0 else 1}"
+            # for report in reports_collection.find().sort([("ID", pymongo.DESCENDING)]).limit(1):
+            #     highest_id = int(report["ID"].split("-")[1])
+
+            start_time = datetime.now()
+            end_time = start_time + timedelta(minutes=duration_minutes)
+            round_time = start_time
+
+            weather_main = weather_data.get("main", {})
+            weather_wind = weather_data.get("wind", {})
+            weather_conditions = weather_data.get("weather", [{}])[0]
+            
+            weather_report = {
+                "weather_timestamp": round_time,
+                "temperature_f": round((weather_main.get("temp", 0) - 273.15) * 9/5 + 32, 2),
+                "wind_chill_f": "",
+                "humidity_percent": weather_main.get("humidity", ""),
+                "pressure_in": round(weather_main.get("pressure", 0) * 0.02953, 2),
+                "visibility_mi": round(weather_data.get("visibility", 0) / 1609.34, 2),
+                "wind_direction": weather_wind.get("deg", 0),
+                "wind_speed_mph": round(weather_wind.get("speed", 0) * 2.23694, 2),
+                "precipitation_in": weather_data.get("rain", {}).get("1h", 0),
+                "weather_condition": weather_conditions.get("main", "Clear")
+            }
+
+            if weather_report["weather_condition"] == "Clouds":
+                weather_report["weather_condition"] = "Cloudy"
+
+            wind_direction_map = {
+                0: 'Calm',  # Calm winds
+                1: 'N',     # North
+                2: 'NE',    # North-East
+                3: 'E',     # East
+                4: 'SE',    # South-East
+                5: 'S',     # South
+                6: 'SW',    # South-West
+                7: 'W',     # West
+                8: 'NW',    # North-West
+                360: 'Calm',  # Calm (for 360 degrees)
+            }
+
+            final_wind_direction =  get_wind_direction.get_wind_direction(weather_report.get("wind_direction"), weather_report.get("wind_speed_mph"))
+
+            # Example location for now (modify as needed based on state/city input)
+            location = LocationInfo(city, "US", "UTC", lat, lon)
+
+            # Get current sun times for the location
+            s = sun(location.observer, date=datetime.now().date())
+
+            # Assume s['sunrise'] and s['sunset'] have a timezone (e.g., UTC or any other)
+            timezone = s['sunrise'].tzinfo  # Extract timezone from the datetime
+            current_time = datetime.now(pytz.utc).astimezone(timezone)  # Localize to match sunrise/sunset
+
+
+            # st.write(s.keys())
+            # Determine day or night
+            sunrise_sunset = "Day" if s['sunrise'] <= current_time <= s['sunset'] else "Night"
+            civil_twilight = "Day" if s['dawn'] <= current_time <= s['dusk'] else "Night"
+            nautical_twilight = "Day" if s['dawn'] <= current_time <= s['dusk'] else "Night"
+            astronomical_twilight = "Day" if s['dawn'] <= current_time <= s['dusk'] else "Night"
+
+            # report = {
+            #     "ID": new_id,
+            #     "Source": "Source2",
+            #     "Severity": severity,
+            #     "Start_Time": start_time,
+            #     "End_Time": end_time.strftime("%Y-%m-%d %H:%M:%S"),
+            #     "Start_Lat": lat,
+            #     "Start_Lng": lon,
+            #     "End_Lat": "",
+            #     "End_Lng": "",
+            #     "Distance(mi)": 0,
+            #     "Description": description,
+            #     "Street": street,
+            #     "City": city,
+            #     "County": county,
+            #     "State": state,
+            #     "Zipcode": 0,
+            #     "Country": "US",
+            #     "Timezone": "US/Pacific",
+            #     "Airport_Code": "",
+            #     **weather_report,
+            #     "Amenity": amenity,
+            #     "Bump": bump,
+            #     "Crossing": crossing,
+            #     "Give_Way": give_way,
+            #     "Junction": junction,
+            #     "No_Exit": no_exit,
+            #     "Railway": railway,
+            #     "Roundabout": roundabout,
+            #     "Station": station,
+            #     "Stop": stop,
+            #     "Traffic_Calming": traffic_calming,
+            #     "Traffic_Signal": traffic_signal,
+            #     "Turning_Loop": turning_loop,
+            #     "Sunrise_Sunset": sunrise_sunset,
+            #     "Civil_Twilight": civil_twilight,
+            #     "Nautical_Twilight": nautical_twilight,
+            #     "Astronomical_Twilight": astronomical_twilight
+            # }
+
+
+            # report = TrafficIncidentCreate(
+            #     severity=severity,
+            #     start_time=start_time,
+            #     end_time=end_time,
+            #     start_lat=lat,
+            #     start_lng=lon,
+            #     description=description,
+            #     street=street,
+            #     city=city,
+            #     county=county,
+            #     state=state,
+            #     weather_timestamp=round_time,
+            #     temperature_f=weather_report.get("temperature_f"),
+            #     humidity_percent=weather_report.get("humidity_percent"),
+            #     pressure_in=weather_report.get("pressure_in"),
+            #     visibility_mi=weather_report.get("visibility_mi"),
+            #     wind_direction=final_wind_direction,
+            #     wind_speed_mph=weather_report.get("wind_speed_mph"),
+            #     precipitation_in=weather_report.get("precipitation_in"),
+            #     weather_condition=weather_report.get("weather_condition"),
+            #     amenity=amenity,
+            #     bump=bump,
+            #     crossing=crossing,
+            #     give_way=give_way,
+            #     junction=junction,
+            #     no_exit=no_exit,
+            #     railway=railway,
+            #     roundabout=roundabout,
+            #     station=station,
+            #     stop=stop,
+            #     traffic_calming=traffic_calming,
+            #     traffic_signal=traffic_signal,
+            #     turning_loop=turning_loop,
+            #     sunrise_sunset=sunrise_sunset,
+            #     civil_twilight=civil_twilight,
+            #     nautical_twilight=nautical_twilight,
+            #     astronomical_twilight=astronomical_twilight
+            # )
+
+            report = {
+                "severity": severity,
+                "start_time": start_time.strftime("%Y-%m-%d %H:%M:%S"),
+                "end_time": end_time.strftime("%Y-%m-%d %H:%M:%S"),
+                "start_lat": lat,
+                "start_lng":  lon,
+                "description":  description,
+                "street":  street,
+                "city":  city,
+                "county":  county,
+                "state":  state,
+                "weather_timestamp":  round_time.strftime("%Y-%m-%d %H:%M:%S"),
+                "temperature_f":  weather_report.get("temperature_f"),
+                "humidity_percent":  weather_report.get("humidity_percent"),
+                "pressure_in":  weather_report.get("pressure_in"),
+                "visibility_mi":  weather_report.get("visibility_mi"),
+                "wind_direction":  final_wind_direction,
+                "wind_speed_mph":  weather_report.get("wind_speed_mph"),
+                "precipitation_in":  weather_report.get("precipitation_in"),
+                "weather_condition":  weather_report.get("weather_condition"),
+                "amenity":  amenity,
+                "bump":  bump,
+                "crossing":  crossing,
+                "give_way":  give_way,
+                "junction":  junction,
+                "no_exit":  no_exit,
+                "railway":  railway,
+                "roundabout":  roundabout,
+                "station":  station,
+                "stop":  stop,
+                "traffic_calming":  traffic_calming,
+                "traffic_signal":  traffic_signal,
+                "turning_loop":  turning_loop,
+                "sunrise_sunset":  sunrise_sunset,
+                "civil_twilight":  civil_twilight,
+                "nautical_twilight":  nautical_twilight,
+                "astronomical_twilight":  astronomical_twilight
+                }
+                
+            
+            #  #to insert to postgresql
+            # reports_collection.insert_one(report)
+            
+            response_data_model = requests.post(
+                "http://127.0.0.1:8000/accident", 
+                json=report
+            )
+            if response_data_model.status_code != 200:
+                raise ValueError(f"API error: {response_data_model.status_code}, {response_data_model.text}")
+            st.success("Report submitted successfully!")
 
     if predicted_severity:
         # Save to MongoDB
         
         # get lat, lon
         address = street + " " + city + " " + county + " " + state
-        lat, lon = get_lat_lon(address)
+        lat_lon = get_lat_lon(address)
+
+        if lat_lon is None:
+            st.error("Address not found! Please check the details and try again.")
+        else:
+            lat, lon = lat_lon
         
-        # get weather data
-        weather_data = get_weather_data(lat, lon)
-        print(address)
-        print(weather_data)
-        
-        ## highest_id = 0
-        
-        ## last_record = reports_collection.find_one({}, sort=[("_id", pymongo.DESCENDING)])
+            # get weather data
+            weather_data = get_weather_data(lat, lon)
+            print(address)
+            print(weather_data)
+            
+            ## highest_id = 0
+            
+            ## last_record = reports_collection.find_one({}, sort=[("_id", pymongo.DESCENDING)])
 
-        ## if last_record:
-        ##     highest_id = int(last_record["ID"].split("-")[1])
+            ## if last_record:
+            ##     highest_id = int(last_record["ID"].split("-")[1])
 
-        # If collection is empty, start ID from 1
-        ## new_id = f"A-{highest_id + 1 if highest_id > 0 else 1}"
-        # for report in reports_collection.find().sort([("ID", pymongo.DESCENDING)]).limit(1):
-        #     highest_id = int(report["ID"].split("-")[1])
+            # If collection is empty, start ID from 1
+            ## new_id = f"A-{highest_id + 1 if highest_id > 0 else 1}"
+            # for report in reports_collection.find().sort([("ID", pymongo.DESCENDING)]).limit(1):
+            #     highest_id = int(report["ID"].split("-")[1])
 
-        start_time = datetime.now()
-        end_time = start_time + timedelta(minutes=duration_minutes)
-        round_time = start_time
+            start_time = datetime.now()
+            end_time = start_time + timedelta(minutes=duration_minutes)
+            round_time = start_time
 
-        weather_main = weather_data.get("main", {})
-        weather_wind = weather_data.get("wind", {})
-        weather_conditions = weather_data.get("weather", [{}])[0]
-        
-        weather_report = {
-            "weather_timestamp": round_time,
-            "temperature_f": round((weather_main.get("temp", 0) - 273.15) * 9/5 + 32, 2),
-            "wind_chill_f": "",
-            "humidity_percent": weather_main.get("humidity", ""),
-            "pressure_in": round(weather_main.get("pressure", 0) * 0.02953, 2),
-            "visibility_mi": round(weather_data.get("visibility", 0) / 1609.34, 2),
-            "wind_direction": weather_wind.get("deg", 0),
-            "wind_speed_mph": round(weather_wind.get("speed", 0) * 2.23694, 2),
-            "precipitation_in": weather_data.get("rain", {}).get("1h", 0),
-            "weather_condition": weather_conditions.get("main", "Clear")
-        }
-
-        if weather_report["weather_condition"] == "Clouds":
-            weather_report["weather_condition"] = "Cloudy"
-
-        wind_direction_map = {
-            0: 'Calm',  # Calm winds
-            1: 'N',     # North
-            2: 'NE',    # North-East
-            3: 'E',     # East
-            4: 'SE',    # South-East
-            5: 'S',     # South
-            6: 'SW',    # South-West
-            7: 'W',     # West
-            8: 'NW',    # North-West
-            360: 'Calm',  # Calm (for 360 degrees)
-        }
-
-        final_wind_direction =  get_wind_direction.get_wind_direction(weather_report.get("wind_direction"), weather_report.get("wind_speed_mph"))
-
-        # Example location for now (modify as needed based on state/city input)
-        location = LocationInfo(city, "US", "UTC", lat, lon)
-
-        # Get current sun times for the location
-        s = sun(location.observer, date=datetime.now().date())
-
-        # Assume s['sunrise'] and s['sunset'] have a timezone (e.g., UTC or any other)
-        timezone = s['sunrise'].tzinfo  # Extract timezone from the datetime
-        current_time = datetime.now(pytz.utc).astimezone(timezone)  # Localize to match sunrise/sunset
-
-
-        # st.write(s.keys())
-        # Determine day or night
-        sunrise_sunset = "Day" if s['sunrise'] <= current_time <= s['sunset'] else "Night"
-        civil_twilight = "Day" if s['dawn'] <= current_time <= s['dusk'] else "Night"
-        nautical_twilight = "Day" if s['dawn'] <= current_time <= s['dusk'] else "Night"
-        astronomical_twilight = "Day" if s['dawn'] <= current_time <= s['dusk'] else "Night"
-
-        report = {
-            "severity": severity,
-            "start_time": start_time.strftime("%Y-%m-%d %H:%M:%S"),
-            "end_time": end_time.strftime("%Y-%m-%d %H:%M:%S"),
-            "start_lat": lat,
-            "start_lng":  lon,
-            "description":  description,
-            "street":  street,
-            "city":  city,
-            "county":  county,
-            "state":  state,
-            "weather_timestamp":  round_time.strftime("%Y-%m-%d %H:%M:%S"),
-            "temperature_f":  weather_report.get("temperature_f"),
-            "humidity_percent":  weather_report.get("humidity_percent"),
-            "pressure_in":  weather_report.get("pressure_in"),
-            "visibility_mi":  weather_report.get("visibility_mi"),
-            "wind_direction":  final_wind_direction,
-            "wind_speed_mph":  weather_report.get("wind_speed_mph"),
-            "precipitation_in":  weather_report.get("precipitation_in"),
-            "weather_condition":  weather_report.get("weather_condition"),
-            "amenity":  amenity,
-            "bump":  bump,
-            "crossing":  crossing,
-            "give_way":  give_way,
-            "junction":  junction,
-            "no_exit":  no_exit,
-            "railway":  railway,
-            "roundabout":  roundabout,
-            "station":  station,
-            "stop":  stop,
-            "traffic_calming":  traffic_calming,
-            "traffic_signal":  traffic_signal,
-            "turning_loop":  turning_loop,
-            "sunrise_sunset":  sunrise_sunset,
-            "civil_twilight":  civil_twilight,
-            "nautical_twilight":  nautical_twilight,
-            "astronomical_twilight":  astronomical_twilight
+            weather_main = weather_data.get("main", {})
+            weather_wind = weather_data.get("wind", {})
+            weather_conditions = weather_data.get("weather", [{}])[0]
+            
+            weather_report = {
+                "weather_timestamp": round_time,
+                "temperature_f": round((weather_main.get("temp", 0) - 273.15) * 9/5 + 32, 2),
+                "wind_chill_f": "",
+                "humidity_percent": weather_main.get("humidity", ""),
+                "pressure_in": round(weather_main.get("pressure", 0) * 0.02953, 2),
+                "visibility_mi": round(weather_data.get("visibility", 0) / 1609.34, 2),
+                "wind_direction": weather_wind.get("deg", 0),
+                "wind_speed_mph": round(weather_wind.get("speed", 0) * 2.23694, 2),
+                "precipitation_in": weather_data.get("rain", {}).get("1h", 0),
+                "weather_condition": weather_conditions.get("main", "Clear")
             }
 
-        # Make an API request or call the model
-        prediction_response = requests.post(
-            "http://127.0.0.1:8000/predict", 
-            json=report
-        )
+            if weather_report["weather_condition"] == "Clouds":
+                weather_report["weather_condition"] = "Cloudy"
 
-        st.success(f"The predicted severity of the accident is: {prediction_response.text}")
-        # if prediction_response.status_code == 200:
-        #     predicted_severity = prediction_response.json().get("predicted_severity")
-        #     st.success(f"The predicted severity of the accident is: {predicted_severity}")
-        # else:
-        #     st.error(f"Error in severity prediction: {prediction_response.status_code}")
+            wind_direction_map = {
+                0: 'Calm',  # Calm winds
+                1: 'N',     # North
+                2: 'NE',    # North-East
+                3: 'E',     # East
+                4: 'SE',    # South-East
+                5: 'S',     # South
+                6: 'SW',    # South-West
+                7: 'W',     # West
+                8: 'NW',    # North-West
+                360: 'Calm',  # Calm (for 360 degrees)
+            }
+
+            final_wind_direction =  get_wind_direction.get_wind_direction(weather_report.get("wind_direction"), weather_report.get("wind_speed_mph"))
+
+            # Example location for now (modify as needed based on state/city input)
+            location = LocationInfo(city, "US", "UTC", lat, lon)
+
+            # Get current sun times for the location
+            s = sun(location.observer, date=datetime.now().date())
+
+            # Assume s['sunrise'] and s['sunset'] have a timezone (e.g., UTC or any other)
+            timezone = s['sunrise'].tzinfo  # Extract timezone from the datetime
+            current_time = datetime.now(pytz.utc).astimezone(timezone)  # Localize to match sunrise/sunset
+
+
+            # st.write(s.keys())
+            # Determine day or night
+            sunrise_sunset = "Day" if s['sunrise'] <= current_time <= s['sunset'] else "Night"
+            civil_twilight = "Day" if s['dawn'] <= current_time <= s['dusk'] else "Night"
+            nautical_twilight = "Day" if s['dawn'] <= current_time <= s['dusk'] else "Night"
+            astronomical_twilight = "Day" if s['dawn'] <= current_time <= s['dusk'] else "Night"
+
+            report = {
+                "severity": severity,
+                "start_time": start_time.strftime("%Y-%m-%d %H:%M:%S"),
+                "end_time": end_time.strftime("%Y-%m-%d %H:%M:%S"),
+                "start_lat": lat,
+                "start_lng":  lon,
+                "description":  description,
+                "street":  street,
+                "city":  city,
+                "county":  county,
+                "state":  state,
+                "weather_timestamp":  round_time.strftime("%Y-%m-%d %H:%M:%S"),
+                "temperature_f":  weather_report.get("temperature_f"),
+                "humidity_percent":  weather_report.get("humidity_percent"),
+                "pressure_in":  weather_report.get("pressure_in"),
+                "visibility_mi":  weather_report.get("visibility_mi"),
+                "wind_direction":  final_wind_direction,
+                "wind_speed_mph":  weather_report.get("wind_speed_mph"),
+                "precipitation_in":  weather_report.get("precipitation_in"),
+                "weather_condition":  weather_report.get("weather_condition"),
+                "amenity":  amenity,
+                "bump":  bump,
+                "crossing":  crossing,
+                "give_way":  give_way,
+                "junction":  junction,
+                "no_exit":  no_exit,
+                "railway":  railway,
+                "roundabout":  roundabout,
+                "station":  station,
+                "stop":  stop,
+                "traffic_calming":  traffic_calming,
+                "traffic_signal":  traffic_signal,
+                "turning_loop":  turning_loop,
+                "sunrise_sunset":  sunrise_sunset,
+                "civil_twilight":  civil_twilight,
+                "nautical_twilight":  nautical_twilight,
+                "astronomical_twilight":  astronomical_twilight
+                }
+
+            # Make an API request or call the model
+            prediction_response = requests.post(
+                "http://127.0.0.1:8000/predict", 
+                json=report
+            )
+
+            st.success(f"The predicted severity of the accident is: {prediction_response.text}")
+            # if prediction_response.status_code == 200:
+            #     predicted_severity = prediction_response.json().get("predicted_severity")
+            #     st.success(f"The predicted severity of the accident is: {predicted_severity}")
+            # else:
+            #     st.error(f"Error in severity prediction: {prediction_response.status_code}")
